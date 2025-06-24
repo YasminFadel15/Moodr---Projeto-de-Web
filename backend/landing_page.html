@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Moodr - Bem-estar Emocional</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            'purple-primary': '#7357C0',
+            'purple-medium': '#8F6FE5',
+            'purple-light': '#C194ED',
+            'purple-dark': '#544E7E',
+            'purple-dark-2': '#423C52',
+            'gray-primary': '#9695AB',
+            'gray-light': '#D1CFE5',
+            'white-primary': '#F9F8FF',
+            'red-negative': '#E64848',
+            'green-positive': '#3FCF92',
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Manrope', sans-serif; }
+  </style>
+</head>
+
+<body class="bg-white-primary text-gray-900">
+
+  <!-- HEADER -->
+  <header class="flex items-center justify-between px-10 py-4 border-b border-gray-light">
+    <div class="flex items-center gap-3">
+      <div class="text-purple-primary">
+        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 48 48">
+          <path fill-rule="evenodd" clip-rule="evenodd"
+            d="M24 4H6V17.3333V30.6667H24V44H42V30.6667V17.3333H24V4Z"></path>
+        </svg>
+      </div>
+      <h1 class="text-xl font-bold">Moodr</h1>
+    </div>
+    <nav class="flex gap-8 items-center">
+      <a href="#" class="hover:text-purple-primary">Home</a>
+      <a href="#" class="hover:text-purple-primary">Funcionalidades</a>
+      <a href="#" class="px-5 py-2 bg-purple-primary text-white rounded-full hover:bg-purple-medium">Começar</a>
+    </nav>
+  </header>
+
+  <!-- HERO -->
+  <section class="flex justify-center items-center h-[80vh] px-8 bg-gradient-to-br from-purple-light to-purple-medium">
+    <div class="text-center space-y-6 max-w-2xl">
+      <h1 class="text-4xl md:text-5xl font-extrabold text-white">
+        Acompanhe Seu Humor, Encontre Seu Equilíbrio
+      </h1>
+      <p class="text-white text-lg">
+        O Moodr te ajuda a entender seus padrões emocionais, oferecendo suporte e insights para melhorar seu bem-estar.
+      </p>
+      <a href="#" class="inline-block bg-white text-purple-primary px-6 py-3 rounded-full font-semibold hover:bg-gray-light">
+        Começar Agora
+      </a>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="max-w-5xl mx-auto px-6 py-20">
+    <div class="text-center mb-12">
+      <h2 class="text-4xl font-bold mb-4">Funcionalidades</h2>
+      <p class="text-gray-primary">
+        Moodr oferece ferramentas para ajudar você a gerenciar sua saúde emocional.
+      </p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-8">
+      <!-- Card -->
+      <div class="bg-white border border-gray-light rounded-xl p-6 shadow-sm hover:shadow-lg transition">
+        <div class="text-purple-primary mb-4">
+          😄
+        </div>
+        <h3 class="font-semibold text-lg mb-2">Rastreamento de Humor</h3>
+        <p class="text-gray-primary text-sm">
+          Registre seus sentimentos diariamente e identifique padrões ao longo do tempo.
+        </p>
+      </div>
+      <!-- Card -->
+      <div class="bg-white border border-gray-light rounded-xl p-6 shadow-sm hover:shadow-lg transition">
+        <div class="text-purple-primary mb-4">
+          💬
+        </div>
+        <h3 class="font-semibold text-lg mb-2">Suporte Emocional</h3>
+        <p class="text-gray-primary text-sm">
+          Acesse um chatbot de apoio, com inteligência artificial, para orientação e incentivo.
+        </p>
+      </div>
+      <!-- Card -->
+      <div class="bg-white border border-gray-light rounded-xl p-6 shadow-sm hover:shadow-lg transition">
+        <div class="text-purple-primary mb-4">
+          📈
+        </div>
+        <h3 class="font-semibold text-lg mb-2">Estatísticas de Humor</h3>
+        <p class="text-gray-primary text-sm">
+          Visualize seus dados emocionais em gráficos intuitivos e acompanhe seu progresso.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="bg-gradient-to-r from-purple-primary to-purple-medium py-20">
+    <div class="max-w-3xl mx-auto text-center space-y-6">
+      <h2 class="text-3xl md:text-4xl font-bold text-white">
+        Pronto para cuidar do seu bem-estar emocional?
+      </h2>
+      <a href="#" class="inline-block bg-white text-purple-primary px-6 py-3 rounded-full font-semibold hover:bg-gray-light">
+        Começar Agora
+      </a>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="bg-white py-10">
+    <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6 px-6">
+      <div class="flex gap-6">
+        <a href="#" class="text-gray-primary hover:text-purple-primary">Privacidade</a>
+        <a href="#" class="text-gray-primary hover:text-purple-primary">Termos</a>
+        <a href="#" class="text-gray-primary hover:text-purple-primary">Contato</a>
+      </div>
+      <p class="text-gray-primary">&copy; 2025 Moodr. Todos os direitos reservados.</p>
+    </div>
+  </footer>
+
+</body>
+</html>

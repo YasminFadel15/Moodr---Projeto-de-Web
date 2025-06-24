@@ -5,7 +5,7 @@ require_once('db.php');
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $user_id = $_SESSION['user_id'];
     $data = $_POST['data'];
-    $humor = $_POST['humor'];
+    $humor = $_POST['humor'] === 'custom' ? $_POST['custom_humor'] : $_POST['humor'];
     $anotacao = $_POST['anotacao'] ?? '';
     $tags_raw = $_POST['tags'] ?? '';
 
@@ -30,43 +30,109 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ?>
 
 <!DOCTYPE html>
-<html lang="pt-br" class="bg-white text-black dark:bg-gray-900 dark:text-white">
+<html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
-  <title>Registrar Humor - Moodr</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+    <meta charset="UTF-8">
+    <title>Registrar Humor - Moodr</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              'purple-primary': '#7357C0',
+              'purple-medium': '#8F6FE5',
+              'purple-light': '#C194ED',
+              'purple-dark': '#544E7E',
+              'purple-dark-2': '#423C52',
+              'gray-primary': '#9695AB',
+              'gray-light': '#D1CFE5',
+              'white-primary': '#F9F8FF',
+              'red-negative': '#E64848',
+              'green-positive': '#3FCF92',
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      body { font-family: 'Manrope', sans-serif; }
+    </style>
 </head>
-<body class="min-h-screen flex items-center justify-center p-6">
-  <div class="bg-white dark:bg-gray-800 p-6 rounded shadow-lg w-full max-w-lg">
-    <h1 class="text-2xl font-bold mb-4 text-center">Registrar Humor</h1>
-    
-    <form method="POST" class="space-y-4">
+
+<body class="bg-white-primary min-h-screen flex items-center justify-center p-6">
+
+  <div class="bg-white rounded-2xl border border-gray-light shadow-xl w-full max-w-lg p-8">
+    <h1 class="text-3xl font-bold mb-6 text-center">Registrar Humor</h1>
+
+    <form method="POST" class="space-y-6">
+
+      <!-- Data -->
       <div>
-        <label class="block mb-1 font-medium">Data</label>
-        <input type="date" name="data" value="<?= date('Y-m-d') ?>" required class="w-full p-2 rounded border dark:bg-gray-700">
+        <label class="block text-sm font-medium mb-1">Data</label>
+        <input type="date" name="data" value="<?= date('Y-m-d') ?>" required
+          class="w-full px-4 py-2 rounded-xl border border-gray-light bg-gray-light focus:outline-purple-primary">
       </div>
+
+      <!-- Humor -->
       <div>
-        <label class="block mb-1 font-medium">Humor</label>
-        <div class="flex gap-2">
-          <label><input type="radio" name="humor" value="feliz" required> 😊</label>
-          <label><input type="radio" name="humor" value="triste"> 😢</label>
-          <label><input type="radio" name="humor" value="ansioso"> 😰</label>
-          <label><input type="radio" name="humor" value="irritado"> 😠</label>
-          <label><input type="radio" name="humor" value="calmo"> 😌</label>
+        <label class="block text-sm font-medium mb-2">Como você está se sentindo?</label>
+        <div class="flex flex-wrap gap-3">
+          <?php
+          $humores = [
+            'feliz' => '😊',
+            'triste' => '😢',
+            'ansioso' => '😰',
+            'irritado' => '😠',
+            'calmo' => '😌'
+          ];
+          foreach ($humores as $key => $emoji) {
+            echo '<label class="flex items-center gap-2 px-4 py-2 border border-gray-light rounded-full cursor-pointer hover:bg-gray-light">
+                  <input type="radio" name="humor" value="' . $key . '" class="hidden">
+                  <span>' . $emoji . '</span> <span class="capitalize">' . $key . '</span>
+                  </label>';
+          }
+          ?>
+          <!-- Opção de humor personalizado -->
+          <label class="flex items-center gap-2 px-4 py-2 border border-gray-light rounded-full cursor-pointer hover:bg-gray-light">
+            <input type="radio" name="humor" value="custom" class="hidden">
+            <span>✨</span> <span>Personalizado</span>
+          </label>
+        </div>
+
+        <!-- Campo para humor personalizado -->
+        <div class="mt-3">
+          <input type="text" name="custom_humor" placeholder="Digite sua emoção"
+            class="w-full px-4 py-2 rounded-xl border border-gray-light bg-gray-light focus:outline-purple-primary">
         </div>
       </div>
+
+      <!-- Anotação -->
       <div>
-        <label class="block mb-1 font-medium">Anotação (opcional)</label>
-        <textarea name="anotacao" rows="3" class="w-full p-2 rounded border dark:bg-gray-700"></textarea>
+        <label class="block text-sm font-medium mb-1">Anotação (opcional)</label>
+        <textarea name="anotacao" rows="3"
+          class="w-full px-4 py-2 rounded-xl border border-gray-light bg-gray-light focus:outline-purple-primary"
+          placeholder="Escreva algo sobre seu dia..."></textarea>
       </div>
+
+      <!-- Tags -->
       <div>
-        <label class="block mb-1 font-medium">Tags (separadas por vírgula)</label>
-        <input type="text" name="tags" class="w-full p-2 rounded border dark:bg-gray-700" />
+        <label class="block text-sm font-medium mb-1">Tags (separadas por vírgula)</label>
+        <input type="text" name="tags"
+          class="w-full px-4 py-2 rounded-xl border border-gray-light bg-gray-light focus:outline-purple-primary"
+          placeholder="Ex: trabalho, família, estudos...">
       </div>
+
+      <!-- Botão -->
       <div class="text-center">
-        <button type="submit" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition">Salvar</button>
+        <button type="submit"
+          class="bg-purple-primary hover:bg-purple-medium text-white px-6 py-3 rounded-full font-semibold transition">
+          Salvar Registro
+        </button>
       </div>
     </form>
   </div>
+
 </body>
 </html>
