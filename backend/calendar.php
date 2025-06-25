@@ -1,81 +1,141 @@
 <?php include('auth.php'); ?>
 <!DOCTYPE html>
-<html lang="pt-br" class="bg-white text-black dark:bg-gray-900 dark:text-white">
+<html lang="pt-br">
 <head>
   <meta charset="UTF-8">
   <title>Calendário de Humor - Moodr</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'purple-primary': '#7357C0',
+            'purple-medium': '#8F6FE5',
+            'purple-light': '#C194ED',
+            'purple-dark': '#544E7E',
+            'purple-dark-2': '#423C52',
+            'gray-primary': '#9695AB',
+            'gray-light': '#D1CFE5',
+            'white-primary': '#F9F8FF',
+            'red-negative': '#E64848',
+            'green-positive': '#3FCF92',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Manrope', sans-serif; }
+  </style>
 </head>
-<body class="min-h-screen p-6">
+
+<body class="bg-white-primary text-gray-900 min-h-screen p-6">
+
   <header class="mb-6 flex justify-between items-center">
     <h1 class="text-3xl font-bold">📅 Calendário de Humor</h1>
-    <a href="dashboard.php" class="text-purple-600 hover:underline">← Voltar</a>
+    <a href="dashboard.php" class="text-purple-primary hover:underline">← Voltar</a>
   </header>
 
-  <div id="calendar" class="grid grid-cols-7 gap-2"></div>
+  <!-- Calendário -->
+  <div id="calendar" class="grid grid-cols-7 gap-3 bg-white border border-gray-light rounded-2xl p-6 shadow-sm"></div>
 
-  <div id="entry-modal" class="hidden fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex items-center justify-center">
-    <div class="bg-white dark:bg-gray-800 p-6 rounded shadow w-96">
-      <h2 class="text-xl font-bold mb-2">Detalhes do Humor</h2>
-      <p id="modal-date" class="font-semibold"></p>
-      <p id="modal-humor" class="mt-2"></p>
-      <p id="modal-anotacao" class="mt-1 text-sm italic text-gray-600 dark:text-gray-400"></p>
-      <p id="modal-tags" class="mt-2 text-sm"></p>
-      <button onclick="closeModal()" class="mt-4 bg-purple-600 text-white px-3 py-1 rounded">Fechar</button>
+  <!-- Modal -->
+  <div id="entry-modal" class="hidden fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl shadow-lg p-6 w-full max-w-md text-sm">
+      <h2 class="text-xl font-bold mb-3">Detalhes do Dia</h2>
+      <div id="modal-date" class="mb-2 text-purple-primary font-semibold"></div>
+      <div id="modal-content"></div>
+      <div class="mt-4 text-right">
+        <button onclick="closeModal()" class="bg-purple-primary hover:bg-purple-medium text-white px-4 py-2 rounded-full text-sm">Fechar</button>
+      </div>
     </div>
   </div>
 
-  <script>
-    document.addEventListener("DOMContentLoaded", async () => {
-      const calendarEl = document.getElementById("calendar");
-      const today = new Date();
-      const year = today.getFullYear();
-      const month = today.getMonth();
-      const diasNoMes = new Date(year, month + 1, 0).getDate();
-      const primeiroDia = new Date(year, month, 1).getDay();
+  <!-- Script principal -->
+ <script>
+document.addEventListener("DOMContentLoaded", async () => {
+  const calendarEl = document.getElementById("calendar");
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth();
+  const diasNoMes = new Date(year, month + 1, 0).getDate();
+  const primeiroDia = new Date(year, month, 1).getDay();
 
-      const res = await fetch("get_moods.php");
-      const data = await res.json();
+  const [moodsRes, customsRes] = await Promise.all([
+    fetch("get_moods.php"),
+    fetch("get_custom_moods.php")
+  ]);
 
-      for (let i = 0; i < primeiroDia; i++) {
-        calendarEl.innerHTML += `<div></div>`;
-      }
+  const data = await moodsRes.json();
+  const customMoods = await customsRes.json();
 
-      for (let dia = 1; dia <= diasNoMes; dia++) {
-        const dataStr = `${year}-${(month + 1).toString().padStart(2, '0')}-${dia.toString().padStart(2, '0')}`;
-        const entry = data[dataStr];
-        const bgColor = entry ? humorColor(entry.humor) : "bg-gray-200 dark:bg-gray-700";
-        calendarEl.innerHTML += `
-          <div class="p-2 text-center rounded cursor-pointer ${bgColor}" onclick="openModal('${dataStr}')">
-            ${dia}
-          </div>`;
-      }
+  // Emojis fixos
+  const humorEmojis = {
+    feliz: "😊",
+    triste: "😢",
+    ansioso: "😰",
+    irritado: "😠",
+    calmo: "😌"
+  };
 
-      window.openModal = (date) => {
-        const entry = data[date];
-        if (!entry) return;
-        document.getElementById("modal-date").innerText = date;
-        document.getElementById("modal-humor").innerText = "Humor: " + entry.humor;
-        document.getElementById("modal-anotacao").innerText = "Anotação: " + (entry.anotacao || "—");
-        document.getElementById("modal-tags").innerHTML = "Tags: " + (entry.tags || "—") + `<br><a href="edit_mood.php?data=${date}" class="text-purple-600 underline">Editar</a>`;
-        document.getElementById("entry-modal").classList.remove("hidden");
-      };
+  // Adiciona humores personalizados
+  customMoods.forEach(item => {
+    humorEmojis[item.nome.trim().toLowerCase()] = item.emoji;
+  });
 
-      window.closeModal = () => {
-        document.getElementById("entry-modal").classList.add("hidden");
-      };
+  // Renderizar calendário
+  for (let i = 0; i < primeiroDia; i++) {
+    calendarEl.innerHTML += `<div></div>`;
+  }
 
-      function humorColor(humor) {
-        const map = {
-          feliz: "bg-green-300 dark:bg-green-600",
-          triste: "bg-blue-300 dark:bg-blue-600",
-          ansioso: "bg-yellow-300 dark:bg-yellow-600",
-          irritado: "bg-red-300 dark:bg-red-600",
-          calmo: "bg-purple-300 dark:bg-purple-600"
-        };
-        return map[humor] || "bg-gray-300";
-      }
-    });
-  </script>
+  for (let dia = 1; dia <= diasNoMes; dia++) {
+    const dataStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+    const registros = data[dataStr];
+
+    let html = `<div class="rounded-xl p-2 text-center border border-gray-light shadow-sm cursor-pointer transition hover:scale-105" onclick="openModal('${dataStr}')`;
+
+    if (registros && registros.length > 0) {
+      const humor = registros[0].humor.toLowerCase();
+      const emoji = humorEmojis[humor] || "🔘";
+      html += `">
+                <div class="text-xl">${emoji}</div>
+                <div class="text-xs mt-1 font-semibold">${dia}</div>
+              </div>`;
+    } else {
+      html += `"><div class="text-gray-400">${dia}</div></div>`;
+    }
+
+    calendarEl.innerHTML += html;
+  }
+
+  // Modal com múltiplos registros
+  window.openModal = (date) => {
+    const registros = data[date];
+    if (!registros) return;
+
+    document.getElementById("modal-date").innerText = `📅 ${date}`;
+    const content = registros.map(reg => `
+      <div class="mb-4 border-b border-gray-light pb-2">
+        <div><strong>Humor:</strong> ${reg.humor}</div>
+        <div><strong>Anotação:</strong> ${reg.anotacao || "—"}</div>
+        <div><strong>Tags:</strong> ${reg.tags.length ? reg.tags.join(', ') : "—"}</div>
+        <div class="mt-2 space-x-3">
+          <a href="edit_mood.php?data=${date}" class="text-purple-primary underline text-sm">✏️ Editar</a>
+          <a href="delete_mood.php?id=${reg.id}" class="text-red-negative underline text-sm" onclick="return confirm('Tem certeza que deseja excluir este registro?')">🗑️ Excluir</a>
+        </div>
+      </div>
+    `).join('');
+
+    document.getElementById("modal-content").innerHTML = content;
+    document.getElementById("entry-modal").classList.remove("hidden");
+  };
+
+  window.closeModal = () => {
+    document.getElementById("entry-modal").classList.add("hidden");
+  };
+});
+</script>
+
 </body>
 </html>

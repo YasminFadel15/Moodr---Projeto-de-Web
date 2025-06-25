@@ -75,38 +75,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           class="w-full px-4 py-2 rounded-xl border border-gray-light bg-gray-light focus:outline-purple-primary">
       </div>
 
-      <!-- Humor -->
-      <div>
-        <label class="block text-sm font-medium mb-2">Como você está se sentindo?</label>
-        <div class="flex flex-wrap gap-3">
-          <?php
-          $humores = [
-            'feliz' => '😊',
-            'triste' => '😢',
-            'ansioso' => '😰',
-            'irritado' => '😠',
-            'calmo' => '😌'
-          ];
-          foreach ($humores as $key => $emoji) {
-            echo '<label class="flex items-center gap-2 px-4 py-2 border border-gray-light rounded-full cursor-pointer hover:bg-gray-light">
-                  <input type="radio" name="humor" value="' . $key . '" class="hidden">
-                  <span>' . $emoji . '</span> <span class="capitalize">' . $key . '</span>
-                  </label>';
-          }
-          ?>
-          <!-- Opção de humor personalizado -->
-          <label class="flex items-center gap-2 px-4 py-2 border border-gray-light rounded-full cursor-pointer hover:bg-gray-light">
-            <input type="radio" name="humor" value="custom" class="hidden">
-            <span>✨</span> <span>Personalizado</span>
-          </label>
-        </div>
+<!-- Humor (fixos + personalizados) -->
+<div>
+  <label class="block text-sm font-medium mb-2">Como você está se sentindo?</label>
+  <div id="humor-list" class="flex flex-wrap gap-3 mb-4"></div>
 
-        <!-- Campo para humor personalizado -->
-        <div class="mt-3">
-          <input type="text" name="custom_humor" placeholder="Digite sua emoção"
-            class="w-full px-4 py-2 rounded-xl border border-gray-light bg-gray-light focus:outline-purple-primary">
-        </div>
-      </div>
+  <!-- Campo de humor personalizado + emoji -->
+  <div class="flex gap-2 items-center mb-4">
+    <input type="text" id="newHumor" placeholder="Novo humor (ex: inspirado)"
+           class="flex-1 px-4 py-2 rounded-xl border border-gray-light bg-gray-light focus:outline-purple-primary" />
+    <input type="text" id="newEmoji" placeholder="Emoji (ex: 💡)" maxlength="2"
+           class="w-16 px-3 py-2 rounded-xl border border-gray-light bg-gray-light text-center focus:outline-purple-primary" />
+    <button type="button" id="addHumor"
+            class="bg-purple-primary text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-purple-medium transition">
+      +
+    </button>
+  </div>
+
+  <input type="hidden" name="humor" id="selectedHumor" required>
+</div>
+
 
       <!-- Anotação -->
       <div>
@@ -133,6 +121,73 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </div>
     </form>
   </div>
+
+  <script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const humorList = document.getElementById('humor-list');
+  const selectedHumorInput = document.getElementById('selectedHumor');
+
+  const fixos = [
+    { nome: 'feliz', emoji: '😊' },
+    { nome: 'triste', emoji: '😢' },
+    { nome: 'ansioso', emoji: '😰' },
+    { nome: 'irritado', emoji: '😠' },
+    { nome: 'calmo', emoji: '😌' }
+  ];
+
+  const customRes = await fetch('get_custom_moods.php');
+  const personalizados = await customRes.json();
+
+  const allHumores = [...fixos, ...personalizados];
+
+  function renderHumores(lista) {
+    humorList.innerHTML = '';
+    lista.forEach(h => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = `${h.emoji} ${h.nome}`;
+      btn.className = 'px-4 py-2 rounded-full border border-gray-light bg-gray-light hover:bg-purple-light transition text-sm';
+      btn.dataset.value = h.nome;
+      btn.onclick = () => {
+        document.querySelectorAll('#humor-list button').forEach(b => b.classList.remove('ring-2'));
+        btn.classList.add('ring-2', 'ring-purple-primary');
+        selectedHumorInput.value = h.nome;
+      };
+      humorList.appendChild(btn);
+    });
+  }
+
+  renderHumores(allHumores);
+
+  // Adicionar novo humor personalizado
+  document.getElementById('addHumor').addEventListener('click', async () => {
+    const nome = document.getElementById('newHumor').value.trim().toLowerCase();
+    const emoji = document.getElementById('newEmoji').value.trim();
+
+    if (!nome || !emoji) {
+      alert('Preencha nome e emoji.');
+      return;
+    }
+
+    const res = await fetch('save_custom_mood.php', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ nome, emoji })
+    });
+
+    if (res.ok) {
+      const novo = { nome, emoji };
+      allHumores.push(novo);
+      renderHumores(allHumores);
+      document.getElementById('newHumor').value = '';
+      document.getElementById('newEmoji').value = '';
+    } else {
+      const r = await res.json();
+      alert(r.error || 'Erro ao salvar humor.');
+    }
+  });
+});
+</script>
 
 </body>
 </html>
