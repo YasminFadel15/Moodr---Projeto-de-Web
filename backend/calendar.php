@@ -13,9 +13,6 @@
             'purple-primary': '#7357C0',
             'purple-medium': '#8F6FE5',
             'purple-light': '#C194ED',
-            'purple-dark': '#544E7E',
-            'purple-dark-2': '#423C52',
-            'gray-primary': '#9695AB',
             'gray-light': '#D1CFE5',
             'white-primary': '#F9F8FF',
             'red-negative': '#E64848',
@@ -30,112 +27,159 @@
   </style>
 </head>
 
-<body class="bg-white-primary text-gray-900 min-h-screen p-6">
+<body class="bg-white-primary min-h-screen text-gray-900 p-6">
 
-  <header class="mb-6 flex justify-between items-center">
-    <h1 class="text-3xl font-bold">📅 Calendário de Humor</h1>
-    <a href="dashboard.php" class="text-purple-primary hover:underline">← Voltar</a>
+  <!-- MENU SUPERIOR -->
+  <header class="flex justify-between items-center mb-8">
+    <h1 class="text-xl font-bold">Calendário de Humor</h1>
+    <nav class="flex gap-2 text-sm">
+      <a href="dashboard.php" class="px-3 py-1 rounded-full border border-gray-light hover:bg-gray-light">Dashboard</a>
+      <a href="calendar.php" class="px-3 py-1 rounded-full border border-purple-medium text-purple-primary font-medium hover:bg-purple-medium hover:text-white transition">Calendário</a>
+      <a href="analytics.php" class="px-3 py-1 rounded-full border border-gray-light hover:bg-gray-light">Gráficos</a>
+      <a href="profile.php" class="px-3 py-1 rounded-full border border-gray-light hover:bg-gray-light">Perfil</a>
+      <a href="logout.php" class="px-3 py-1 rounded-full border border-red-negative text-red-negative hover:bg-red-negative hover:text-white transition">Sair</a>
+    </nav>
   </header>
 
-  <!-- Calendário -->
-  <div id="calendar" class="grid grid-cols-7 gap-3 bg-white border border-gray-light rounded-2xl p-6 shadow-sm"></div>
+  <!-- CONTROLES DO MÊS -->
+  <div class="flex justify-center items-center mb-4 gap-4">
+    <button id="prev" class="text-purple-primary hover:text-purple-medium text-xl">←</button>
+    <h2 id="monthLabel" class="text-lg font-semibold"></h2>
+    <button id="next" class="text-purple-primary hover:text-purple-medium text-xl">→</button>
+  </div>
 
-  <!-- Modal -->
-  <div id="entry-modal" class="hidden fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white rounded-xl shadow-lg p-6 w-full max-w-md text-sm">
-      <h2 class="text-xl font-bold mb-3">Detalhes do Dia</h2>
-      <div id="modal-date" class="mb-2 text-purple-primary font-semibold"></div>
+  <!-- CALENDÁRIO -->
+  <div class="grid grid-cols-7 gap-2 w-full max-w-3xl mx-auto text-sm" id="calendar"></div>
+
+  <!-- MODAL -->
+  <div id="entry-modal" class="hidden fixed top-0 left-0 w-full h-full bg-black bg-opacity-40 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
+      <h2 class="text-lg font-bold mb-2">Registro do Dia</h2>
+      <div id="modal-date" class="text-purple-primary mb-2"></div>
       <div id="modal-content"></div>
       <div class="mt-4 text-right">
-        <button onclick="closeModal()" class="bg-purple-primary hover:bg-purple-medium text-white px-4 py-2 rounded-full text-sm">Fechar</button>
+        <button onclick="closeModal()" class="bg-purple-primary text-white px-4 py-1 rounded-full text-sm hover:bg-purple-medium transition">Fechar</button>
       </div>
     </div>
   </div>
 
-  <!-- Script principal -->
- <script>
-document.addEventListener("DOMContentLoaded", async () => {
-  const calendarEl = document.getElementById("calendar");
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = today.getMonth();
-  const diasNoMes = new Date(year, month + 1, 0).getDate();
-  const primeiroDia = new Date(year, month, 1).getDay();
+  <script>
+    const calendarEl = document.getElementById("calendar");
+    const monthLabel = document.getElementById("monthLabel");
+    const hoje = new Date();
+    let currentMonth = hoje.getMonth();
+    let currentYear = hoje.getFullYear();
 
-  const [moodsRes, customsRes] = await Promise.all([
-    fetch("get_moods.php"),
-    fetch("get_custom_moods.php")
-  ]);
+    const humorEmojis = {
+      feliz: "😊",
+      triste: "😢",
+      ansioso: "😰",
+      irritado: "😠",
+      calmo: "😌",
+      normal: "😐"
+    };
 
-  const data = await moodsRes.json();
-  const customMoods = await customsRes.json();
+    let moodData = {};
+    let customMoods = [];
 
-  // Emojis fixos
-  const humorEmojis = {
-    feliz: "😊",
-    triste: "😢",
-    ansioso: "😰",
-    irritado: "😠",
-    calmo: "😌"
-  };
+    async function fetchData() {
+      const [moods, customs] = await Promise.all([
+        fetch("get_moods.php").then(res => res.json()),
+        fetch("get_custom_moods.php").then(res => res.json())
+      ]);
 
-  // Adiciona humores personalizados
-  customMoods.forEach(item => {
-    humorEmojis[item.nome.trim().toLowerCase()] = item.emoji;
-  });
+      moodData = moods;
+      customMoods = customs;
+      customMoods.forEach(c => {
+        humorEmojis[c.nome.trim().toLowerCase()] = c.emoji;
+      });
 
-  // Renderizar calendário
-  for (let i = 0; i < primeiroDia; i++) {
-    calendarEl.innerHTML += `<div></div>`;
-  }
-
-  for (let dia = 1; dia <= diasNoMes; dia++) {
-    const dataStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
-    const registros = data[dataStr];
-
-    let html = `<div class="rounded-xl p-2 text-center border border-gray-light shadow-sm cursor-pointer transition hover:scale-105" onclick="openModal('${dataStr}')`;
-
-    if (registros && registros.length > 0) {
-      const humor = registros[0].humor.toLowerCase();
-      const emoji = humorEmojis[humor] || "🔘";
-      html += `">
-                <div class="text-xl">${emoji}</div>
-                <div class="text-xs mt-1 font-semibold">${dia}</div>
-              </div>`;
-    } else {
-      html += `"><div class="text-gray-400">${dia}</div></div>`;
+      renderCalendar(currentMonth, currentYear);
     }
 
-    calendarEl.innerHTML += html;
-  }
+    function renderCalendar(month, year) {
+      calendarEl.innerHTML = "";
+      const diasNoMes = new Date(year, month + 1, 0).getDate();
+      const primeiroDia = new Date(year, month, 1).getDay();
 
-  // Modal com múltiplos registros
-  window.openModal = (date) => {
-    const registros = data[date];
-    if (!registros) return;
+      const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+        "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+      monthLabel.innerText = `${meses[month]} ${year}`;
 
-    document.getElementById("modal-date").innerText = `📅 ${date}`;
-    const content = registros.map(reg => `
-      <div class="mb-4 border-b border-gray-light pb-2">
-        <div><strong>Humor:</strong> ${reg.humor}</div>
-        <div><strong>Anotação:</strong> ${reg.anotacao || "—"}</div>
-        <div><strong>Tags:</strong> ${reg.tags.length ? reg.tags.join(', ') : "—"}</div>
-        <div class="mt-2 space-x-3">
-          <a href="edit_mood.php?data=${date}" class="text-purple-primary underline text-sm">✏️ Editar</a>
-          <a href="delete_mood.php?id=${reg.id}" class="text-red-negative underline text-sm" onclick="return confirm('Tem certeza que deseja excluir este registro?')">🗑️ Excluir</a>
+      for (let i = 0; i < primeiroDia; i++) {
+        calendarEl.innerHTML += `<div></div>`;
+      }
+
+      for (let dia = 1; dia <= diasNoMes; dia++) {
+        const dataStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+        const registros = moodData[dataStr];
+        const cor = ["purple-light", "purple-medium", "purple-primary"];
+        let html = "";
+
+        if (registros) {
+          const humor = registros[0].humor.toLowerCase();
+          const emoji = humorEmojis[humor] || "🔘";
+          const bg = cor[Math.floor(Math.random() * cor.length)];
+
+          html = `<div onclick="openModal('${dataStr}')"
+                     class="rounded-xl bg-${bg} text-white p-3 text-center font-medium shadow cursor-pointer transition hover:scale-105">
+                    <div>${emoji}</div>
+                    <div class="text-xs">${dia}</div>
+                  </div>`;
+        } else {
+          html = `<div class="rounded-xl border border-gray-light p-3 text-center text-xs text-gray-400">
+                    ${dia}
+                  </div>`;
+        }
+
+        calendarEl.innerHTML += html;
+      }
+    }
+
+    function openModal(date) {
+      const registros = moodData[date];
+      if (!registros) return;
+      document.getElementById("modal-date").innerText = date;
+      const html = registros.map(reg => `
+        <div class="mb-4 text-sm border-b pb-2 border-gray-light">
+          <div><strong>Humor:</strong> ${reg.humor}</div>
+          <div><strong>Anotação:</strong> ${reg.anotacao || "—"}</div>
+          <div><strong>Tags:</strong> ${reg.tags.length ? reg.tags.join(', ') : "—"}</div>
+          <a href="edit_mood.php?data=${date}" class="text-purple-primary text-xs underline">✏️ Editar</a>
         </div>
-      </div>
-    `).join('');
+      `).join('');
+      document.getElementById("modal-content").innerHTML = html;
+      document.getElementById("entry-modal").classList.remove("hidden");
+    }
 
-    document.getElementById("modal-content").innerHTML = content;
-    document.getElementById("entry-modal").classList.remove("hidden");
-  };
+    function closeModal() {
+      document.getElementById("entry-modal").classList.add("hidden");
+    }
 
-  window.closeModal = () => {
-    document.getElementById("entry-modal").classList.add("hidden");
-  };
-});
-</script>
+    document.getElementById("prev").onclick = () => {
+      currentMonth--;
+      if (currentMonth < 0) {
+        currentMonth = 11;
+        currentYear--;
+      }
+      renderCalendar(currentMonth, currentYear);
+    };
 
+    document.getElementById("next").onclick = () => {
+      currentMonth++;
+      if (currentMonth > 11) {
+        currentMonth = 0;
+        currentYear++;
+      }
+      renderCalendar(currentMonth, currentYear);
+    };
+
+    // Mostra o calendário já com mês atual mesmo antes dos dados chegarem
+renderCalendar(currentMonth, currentYear);
+
+// Depois busca os dados e atualiza com humores reais
+fetchData();
+
+  </script>
 </body>
 </html>

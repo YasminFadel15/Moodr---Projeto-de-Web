@@ -5,7 +5,7 @@ require_once('db.php');
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $user_id = $_SESSION['user_id'];
     $data = $_POST['data'];
-    $humor = $_POST['humor'] === 'custom' ? $_POST['custom_humor'] : $_POST['humor'];
+    $humor = $_POST['humor'];
     $anotacao = $_POST['anotacao'] ?? '';
     $tags_raw = $_POST['tags'] ?? '';
 
@@ -128,34 +128,47 @@ document.addEventListener('DOMContentLoaded', async () => {
   const selectedHumorInput = document.getElementById('selectedHumor');
 
   const fixos = [
-    { nome: 'feliz', emoji: '😊' },
-    { nome: 'triste', emoji: '😢' },
-    { nome: 'ansioso', emoji: '😰' },
-    { nome: 'irritado', emoji: '😠' },
-    { nome: 'calmo', emoji: '😌' }
+    { nome: 'Felicidade', emoji: '😊' },
+    { nome: 'Medo', emoji: '😱' },
+    { nome: 'Tristeza', emoji: '😢' },
+    { nome: 'Calmo', emoji: '😌' },
+    { nome: 'Ansiedade', emoji: '😰' },
+    { nome: 'Irritação', emoji: '😠' },
   ];
 
-  const customRes = await fetch('get_custom_moods.php');
-  const personalizados = await customRes.json();
+  let personalizados = [];
 
-  const allHumores = [...fixos, ...personalizados];
+try {
+  const customRes = await fetch('get_custom_moods.php');
+  if (customRes.ok) {
+    personalizados = await customRes.json();
+  } else {
+    console.warn('Erro ao buscar humores personalizados:', customRes.statusText);
+  }
+} catch (e) {
+  console.warn('Erro de rede ao buscar humores personalizados:', e);
+}
+
+const allHumores = [...fixos, ...personalizados];
+renderHumores(allHumores);
+
 
   function renderHumores(lista) {
-    humorList.innerHTML = '';
-    lista.forEach(h => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.textContent = `${h.emoji} ${h.nome}`;
-      btn.className = 'px-4 py-2 rounded-full border border-gray-light bg-gray-light hover:bg-purple-light transition text-sm';
-      btn.dataset.value = h.nome;
-      btn.onclick = () => {
-        document.querySelectorAll('#humor-list button').forEach(b => b.classList.remove('ring-2'));
-        btn.classList.add('ring-2', 'ring-purple-primary');
-        selectedHumorInput.value = h.nome;
-      };
-      humorList.appendChild(btn);
-    });
-  }
+  humorList.innerHTML = '';
+  lista.forEach(h => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = `${h.emoji} ${h.nome}`;
+    btn.className = 'px-4 py-2 rounded-full border border-gray-light bg-gray-light hover:bg-purple-light transition text-sm';
+    btn.dataset.value = h.nome;
+    btn.onclick = () => {
+      document.querySelectorAll('#humor-list button').forEach(b => b.classList.remove('ring-2'));
+      btn.classList.add('ring-2', 'ring-purple-primary');
+      selectedHumorInput.value = h.nome;
+    };
+    humorList.appendChild(btn);
+  });
+}
 
   renderHumores(allHumores);
 
