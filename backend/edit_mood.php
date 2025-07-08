@@ -57,6 +57,10 @@ $tags_str = implode(', ', $tags);
 
 <body class="bg-white-primary min-h-screen flex items-center justify-center p-6">
   <div class="bg-white rounded-2xl border border-gray-light shadow-xl w-full max-w-lg p-8">
+    <a href="dashboard.php" class="inline-block mb-4 text-purple-primary hover:text-purple-medium transition">
+      ← Voltar para o painel
+    </a>
+
     <h1 class="text-3xl font-bold mb-6 text-center">Editar Registro de Humor</h1>
 
     <form method="POST" action="update_mood.php" class="space-y-6">

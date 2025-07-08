@@ -1,6 +1,10 @@
 <?php
-require_once 'db.php';
+header('Content-Type: application/json');
 session_start();
+require_once 'db.php';
+
+ini_set('display_errors', 0);
+error_reporting(0);
 
 $user_id = $_SESSION['user_id'] ?? null;
 
@@ -10,8 +14,13 @@ if (!$user_id) {
     exit;
 }
 
-$stmt = $pdo->prepare("SELECT nome, emoji FROM custom_moods WHERE user_id = ?");
-$stmt->execute([$user_id]);
-$customMoods = $stmt->fetchAll(PDO::FETCH_ASSOC);
+try {
+    $stmt = $pdo->prepare("SELECT nome, emoji FROM custom_moods WHERE user_id = ?");
+    $stmt->execute([$user_id]);
+    $customMoods = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-echo json_encode($customMoods);
+    echo json_encode($customMoods);
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(["error" => "Erro no servidor"]);
+}

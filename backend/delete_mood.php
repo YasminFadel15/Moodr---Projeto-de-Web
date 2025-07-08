@@ -18,5 +18,5 @@ if (!$stmt->fetch()) {
 
 $pdo->prepare("DELETE FROM mood_entries WHERE id = ?")->execute([$mood_id]);
 
-header("Location: calendar.php");
+header("Location: dashboard.php");
 exit;

@@ -27,5 +27,6 @@ foreach ($tags as $tag) {
     $pdo->prepare("INSERT INTO tags (mood_entry_id, tag) VALUES (?, ?)")->execute([$mood_id, $tag]);
 }
 
-header("Location: calendar.php");
+header("Location: dashboard.php");
 exit;
+

@@ -71,11 +71,12 @@
     let currentYear = hoje.getFullYear();
 
     const humorEmojis = {
-      feliz: "😊",
-      triste: "😢",
-      ansioso: "😰",
-      irritado: "😠",
+      felicidade: "😊",
+      tristeza: "😢",
+      ansiedade: "😰",
+      irritação: "😠",
       calmo: "😌",
+      medo: "😱",
       normal: "😐"
     };
 
@@ -90,8 +91,11 @@
 
       moodData = moods;
       customMoods = customs;
+
+      // Adiciona os emojis personalizados
       customMoods.forEach(c => {
-        humorEmojis[c.nome.trim().toLowerCase()] = c.emoji;
+        const nome = c.nome.trim().toLowerCase();
+        humorEmojis[nome] = c.emoji;
       });
 
       renderCalendar(currentMonth, currentYear);
@@ -113,23 +117,27 @@
       for (let dia = 1; dia <= diasNoMes; dia++) {
         const dataStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
         const registros = moodData[dataStr];
-        const cor = ["purple-light", "purple-medium", "purple-primary"];
+        const cores = ["purple-light", "purple-medium", "purple-primary"];
         let html = "";
 
         if (registros) {
-          const humor = registros[0].humor.toLowerCase();
+          const humor = registros[0].humor.trim().toLowerCase();
           const emoji = humorEmojis[humor] || "🔘";
-          const bg = cor[Math.floor(Math.random() * cor.length)];
+          const bg = cores[Math.floor(Math.random() * cores.length)];
 
-          html = `<div onclick="openModal('${dataStr}')"
-                     class="rounded-xl bg-${bg} text-white p-3 text-center font-medium shadow cursor-pointer transition hover:scale-105">
-                    <div>${emoji}</div>
-                    <div class="text-xs">${dia}</div>
-                  </div>`;
+          html = `
+            <div onclick="openModal('${dataStr}')" 
+              class="rounded-xl bg-${bg} text-white p-3 text-center font-medium shadow cursor-pointer transition hover:scale-105">
+              <div class="text-2xl">${emoji}</div>
+              <div class="text-xs">${dia}</div>
+            </div>
+          `;
         } else {
-          html = `<div class="rounded-xl border border-gray-light p-3 text-center text-xs text-gray-400">
-                    ${dia}
-                  </div>`;
+          html = `
+            <div class="rounded-xl border border-gray-light p-3 text-center text-xs text-gray-400">
+              ${dia}
+            </div>
+          `;
         }
 
         calendarEl.innerHTML += html;
@@ -139,6 +147,7 @@
     function openModal(date) {
       const registros = moodData[date];
       if (!registros) return;
+
       document.getElementById("modal-date").innerText = date;
       const html = registros.map(reg => `
         <div class="mb-4 text-sm border-b pb-2 border-gray-light">
@@ -162,7 +171,7 @@
         currentMonth = 11;
         currentYear--;
       }
-      renderCalendar(currentMonth, currentYear);
+      fetchData();
     };
 
     document.getElementById("next").onclick = () => {
@@ -171,15 +180,10 @@
         currentMonth = 0;
         currentYear++;
       }
-      renderCalendar(currentMonth, currentYear);
+      fetchData();
     };
 
-    // Mostra o calendário já com mês atual mesmo antes dos dados chegarem
-renderCalendar(currentMonth, currentYear);
-
-// Depois busca os dados e atualiza com humores reais
-fetchData();
-
+    fetchData();
   </script>
 </body>
 </html>
