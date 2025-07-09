@@ -47,7 +47,7 @@ $user = $stmt->fetch();
   </style>
 </head>
 
-<body class="bg-gradient-to-br from-purple-primary via-white-primary to-gray-light min-h-screen text-gray-900 p-6">
+<body class="bg-white-primary min-h-screen text-gray-900 p-6">
 
 <!-- HEADER -->
 <header class="flex justify-between items-center mb-10">

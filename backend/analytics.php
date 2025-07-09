@@ -4,27 +4,44 @@ require_once('db.php');
 
 $user_id = $_SESSION['user_id'];
 
+// Frequência total por humor (para gráfico de pizza)
 $stmt = $pdo->prepare("SELECT humor, COUNT(*) AS total FROM mood_entries WHERE user_id = ? GROUP BY humor");
 $stmt->execute([$user_id]);
 $frequencias = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-$stmt = $pdo->prepare("SELECT data, humor FROM mood_entries WHERE user_id = ? ORDER BY data DESC LIMIT 15");
-$stmt->execute([$user_id]);
-$por_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// Humores fixos com emojis
+$fixos = [
+    ['nome' => 'triste',   'emoji' => '😢'],
+    ['nome' => 'ansioso',  'emoji' => '😰'],
+    ['nome' => 'irritado', 'emoji' => '😠'],
+    ['nome' => 'calmo',    'emoji' => '😌'],
+    ['nome' => 'feliz',    'emoji' => '😊'],
+];
 
-function humorToNum($humor) {
-    return [
-        'triste' => 0,
-        'ansioso' => 1,
-        'irritado' => 2,
-        'calmo' => 3,
-        'feliz' => 4
-    ][$humor] ?? 0;
+// Personalizados
+$stmt = $pdo->prepare("SELECT nome, emoji FROM custom_moods WHERE user_id = ?");
+$stmt->execute([$user_id]);
+$personalizados = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Mapeia humores
+$todosHumores = array_merge($fixos, $personalizados);
+$humorMap = [];
+foreach ($todosHumores as $h) {
+    $humorMap[$h['nome']] = "{$h['emoji']} " . ucfirst($h['nome']);
 }
 
-// Formata datas para dd/mm/aaaa
-$datas_formatadas = array_map(fn($d) => date('d/m/Y', strtotime($d['data'])), array_reverse($por_data));
-$valores_numericos = array_reverse(array_map(fn($h) => humorToNum($h['humor']), $por_data));
+// Últimos 30 registros
+$stmt = $pdo->prepare("SELECT data, humor FROM mood_entries WHERE user_id = ? ORDER BY data DESC LIMIT 30");
+$stmt->execute([$user_id]);
+$registros = array_reverse($stmt->fetchAll(PDO::FETCH_ASSOC));
+
+// Gera dados para o gráfico
+$labels = [];
+$humoresExibidos = [];
+foreach ($registros as $r) {
+    $labels[] = date('d/m/Y', strtotime($r['data']));
+    $humoresExibidos[] = $humorMap[$r['humor']] ?? ucfirst($r['humor']);
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -58,7 +75,6 @@ $valores_numericos = array_reverse(array_map(fn($h) => humorToNum($h['humor']), 
     body { font-family: 'Manrope', sans-serif; }
   </style>
 </head>
-
 <body class="bg-white-primary min-h-screen flex items-center justify-center p-6">
   <div class="bg-white rounded-2xl border border-gray-light shadow-xl w-full max-w-3xl p-6 space-y-6">
 
@@ -76,18 +92,18 @@ $valores_numericos = array_reverse(array_map(fn($h) => humorToNum($h['humor']), 
       </div>
     </section>
 
-    <!-- Gráfico de Linha -->
-    <section>
-      <h2 class="text-lg font-semibold mb-2">Linha do tempo (últimos registros)</h2>
-      <div class="bg-gray-light rounded-xl p-4">
-        <canvas id="graficoLinha" height="220"></canvas>
-      </div>
-    </section>
-
+<!-- Gráfico de Barras Verticais Compacto -->
+<section>
+  <h2 class="text-lg font-semibold mb-2">Histórico de Humor</h2>
+  <div class="bg-gray-light rounded-xl p-2">
+    <canvas id="graficoBarrasCompacto" height="180"></canvas>
   </div>
+</section>
+
+
 
   <script>
-    // Gráfico de Pizza (compacto e com tons de roxo)
+    // Gráfico de Pizza
     const pizzaCtx = document.getElementById('graficoPizza').getContext('2d');
     new Chart(pizzaCtx, {
       type: 'pie',
@@ -95,9 +111,7 @@ $valores_numericos = array_reverse(array_map(fn($h) => humorToNum($h['humor']), 
         labels: <?= json_encode(array_column($frequencias, 'humor')) ?>,
         datasets: [{
           data: <?= json_encode(array_column($frequencias, 'total')) ?>,
-          backgroundColor: [
-            '#7357C0', '#8F6FE5', '#C194ED', '#544E7E', '#423C52'
-          ]
+          backgroundColor: ['#7357C0', '#8F6FE5', '#C194ED', '#544E7E', '#423C52']
         }]
       },
       options: {
@@ -113,58 +127,61 @@ $valores_numericos = array_reverse(array_map(fn($h) => humorToNum($h['humor']), 
       }
     });
 
-    // Gráfico de Linha com datas formatadas
-    const linhaCtx = document.getElementById('graficoLinha').getContext('2d');
-    new Chart(linhaCtx, {
-      type: 'line',
-      data: {
-        labels: <?= json_encode($datas_formatadas) ?>,
-        datasets: [{
-          label: 'Humor',
-          data: <?= json_encode($valores_numericos) ?>,
-          borderColor: '#7357C0',
-          backgroundColor: 'rgba(115, 87, 192, 0.1)',
-          fill: true,
-          tension: 0.4,
-          pointRadius: 4,
-          pointBackgroundColor: '#7357C0'
-        }]
-      },
-      options: {
-        scales: {
-          y: {
-            min: 0,
-            max: 4,
-            ticks: {
-              stepSize: 1,
-              callback: function(value) {
-                const mapa = ['😢 Triste', '😰 Ansioso', '😠 Irritado', '😌 Calmo', '😊 Feliz'];
-                return mapa[value] ?? value;
-              },
-              color: '#423C52',
-              font: { size: 12 }
-            },
-            grid: {
-              color: '#E5E5F5'
-            }
+
+  const humorLabels = <?= json_encode($humoresExibidos, JSON_UNESCAPED_UNICODE) ?>;
+  const humorDatas = <?= json_encode($labels, JSON_UNESCAPED_UNICODE) ?>;
+
+
+    // Gráfico de Barras Verticais (compacto)
+const ctxCompacto = document.getElementById('graficoBarrasCompacto').getContext('2d');
+
+new Chart(ctxCompacto, {
+  type: 'bar',
+  data: {
+    labels: humorLabels,
+    datasets: [{
+      label: 'Humor',
+      data: Array(humorLabels.length).fill(1),
+      backgroundColor: '#7357C0',
+      barPercentage: 0.5,
+      categoryPercentage: 0.6
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          title: function(context) {
+            return `Humor: ${context[0].label}`;
           },
-          x: {
-            ticks: {
-              color: '#423C52',
-              font: { size: 12 }
-            },
-            grid: {
-              display: false
-            }
-          }
-        },
-        plugins: {
-          legend: {
-            display: false
+          label: function(context) {
+            return `Data: ${humorDatas[context.dataIndex]}`;
           }
         }
       }
-    });
+    },
+    scales: {
+      x: {
+        ticks: {
+          color: '#423C52',
+          font: { size: 9 },
+          maxRotation: 45,
+          minRotation: 45
+        },
+        grid: { display: false }
+      },
+      y: {
+        display: false,
+        grid: { display: false }
+      }
+    }
+  }
+});
+
+
   </script>
 </body>
 </html>

@@ -17,9 +17,9 @@ if (!$user_id) {
 try {
     $stmt = $pdo->prepare("SELECT nome, emoji FROM custom_moods WHERE user_id = ?");
     $stmt->execute([$user_id]);
-    $customMoods = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    echo json_encode($customMoods);
+    echo json_encode($result, JSON_UNESCAPED_UNICODE);
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(["error" => "Erro no servidor"]);

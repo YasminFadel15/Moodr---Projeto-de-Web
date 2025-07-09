@@ -33,9 +33,10 @@ $registrosPorDia = [];
 foreach ($registrosMes as $r) {
     $registrosPorDia[$r['dia']] = [
         'id' => $r['id'],
-        'humor' => ucfirst($r['humor'])
+        'humor' => $r['humor']
     ];
 }
+
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -135,7 +136,7 @@ foreach ($registrosMes as $r) {
           $percent = $total_registros > 0 ? round(($count / $total_registros) * 100) : 0;
           echo "
           <div class='flex justify-between items-center text-sm'>
-            <span>" . ucfirst($humor) . "</span>
+            <span>" . $humor . "</span>
             <div class='flex-1 mx-4 h-2 rounded-full bg-gray-light'>
               <div class='h-2 bg-purple-medium rounded-full' style='width: {$percent}%;'></div>
             </div>

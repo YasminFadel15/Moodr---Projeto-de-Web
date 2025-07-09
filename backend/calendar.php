@@ -1,4 +1,32 @@
 <?php include('auth.php'); ?>
+<?php
+require_once 'db.php';
+if (session_status() === PHP_SESSION_NONE) {
+  session_start();
+}
+
+$user_id = $_SESSION['user_id'] ?? null;
+
+if (!$user_id) {
+    http_response_code(401);
+    echo "<p class='text-red-500'>Usuário não autenticado.</p>";
+    exit;
+}
+
+$stmt = $pdo->prepare("SELECT data, humor, anotacao FROM mood_entries WHERE user_id = ?");
+$stmt->execute([$user_id]);
+$moods = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$entriesByDate = [];
+foreach ($moods as $entry) {
+    $entriesByDate[$entry['data']][] = $entry;
+}
+
+// Busca os custom moods para o usuário atual
+$stmtCustom = $pdo->prepare("SELECT nome, emoji FROM custom_moods WHERE user_id = ?");
+$stmtCustom->execute([$user_id]);
+$customMoods = $stmtCustom->fetchAll(PDO::FETCH_ASSOC);
+?>
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -12,7 +40,7 @@
           colors: {
             'purple-primary': '#7357C0',
             'purple-medium': '#8F6FE5',
-            'purple-light': '#C194ED',
+            'purple-light': '#EDE7F6',
             'gray-light': '#D1CFE5',
             'white-primary': '#F9F8FF',
             'red-negative': '#E64848',
@@ -24,11 +52,13 @@
   </script>
   <style>
     body { font-family: 'Manrope', sans-serif; }
+    #modal-humor-cards {
+      max-height: 200px;
+      overflow-y: auto;
+    }
   </style>
 </head>
-
 <body class="bg-white-primary min-h-screen text-gray-900 p-6">
-
   <!-- MENU SUPERIOR -->
   <header class="flex justify-between items-center mb-8">
     <h1 class="text-xl font-bold">Calendário de Humor</h1>
@@ -42,21 +72,34 @@
   </header>
 
   <!-- CONTROLES DO MÊS -->
-  <div class="flex justify-center items-center mb-4 gap-4">
-    <button id="prev" class="text-purple-primary hover:text-purple-medium text-xl">←</button>
+  <div class="flex justify-center items-center mb-6 gap-4">
+    <button id="prev" class="text-purple-primary hover:text-purple-medium text-2xl font-bold">←</button>
     <h2 id="monthLabel" class="text-lg font-semibold"></h2>
-    <button id="next" class="text-purple-primary hover:text-purple-medium text-xl">→</button>
+    <button id="next" class="text-purple-primary hover:text-purple-medium text-2xl font-bold">→</button>
+  </div>
+
+  <!-- NOMES DOS DIAS DA SEMANA -->
+  <div class="grid grid-cols-7 gap-2 w-full max-w-5xl mx-auto text-xs font-semibold text-center text-purple-primary mb-1">
+    <div>Dom</div>
+    <div>Seg</div>
+    <div>Ter</div>
+    <div>Qua</div>
+    <div>Qui</div>
+    <div>Sex</div>
+    <div>Sáb</div>
   </div>
 
   <!-- CALENDÁRIO -->
-  <div class="grid grid-cols-7 gap-2 w-full max-w-3xl mx-auto text-sm" id="calendar"></div>
+  <div class="grid grid-cols-7 gap-2 w-full max-w-5xl mx-auto text-sm" id="calendar"></div>
 
   <!-- MODAL -->
   <div id="entry-modal" class="hidden fixed top-0 left-0 w-full h-full bg-black bg-opacity-40 flex items-center justify-center z-50">
     <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
-      <h2 class="text-lg font-bold mb-2">Registro do Dia</h2>
-      <div id="modal-date" class="text-purple-primary mb-2"></div>
-      <div id="modal-content"></div>
+      <div class="flex justify-between items-center mb-2">
+        <h2 class="text-lg font-bold">Registro do Dia</h2>
+        <div id="modal-date" class="text-purple-primary text-sm"></div>
+      </div>
+      <div id="modal-humor-cards" class="space-y-2"></div>
       <div class="mt-4 text-right">
         <button onclick="closeModal()" class="bg-purple-primary text-white px-4 py-1 rounded-full text-sm hover:bg-purple-medium transition">Fechar</button>
       </div>
@@ -64,100 +107,89 @@
   </div>
 
   <script>
-    const calendarEl = document.getElementById("calendar");
+    const moodEntries = <?php echo json_encode($entriesByDate); ?>;
+    const calendar = document.getElementById("calendar");
     const monthLabel = document.getElementById("monthLabel");
-    const hoje = new Date();
-    let currentMonth = hoje.getMonth();
-    let currentYear = hoje.getFullYear();
 
-    const humorEmojis = {
+    const customEmojis = <?php echo json_encode($customMoods, JSON_UNESCAPED_UNICODE); ?>;
+
+    const customEmojisMap = {};
+    customEmojis.forEach(mood => {
+      customEmojisMap[mood.nome.trim().toLowerCase()] = mood.emoji;
+    });
+
+    const emojis = {
       felicidade: "😊",
       tristeza: "😢",
       ansiedade: "😰",
       irritação: "😠",
       calmo: "😌",
       medo: "😱",
-      normal: "😐"
+      normal: "😐",
+      ...customEmojisMap 
     };
 
-    let moodData = {};
-    let customMoods = [];
-
-    async function fetchData() {
-      const [moods, customs] = await Promise.all([
-        fetch("get_moods.php").then(res => res.json()),
-        fetch("get_custom_moods.php").then(res => res.json())
-      ]);
-
-      moodData = moods;
-      customMoods = customs;
-
-      // Adiciona os emojis personalizados
-      customMoods.forEach(c => {
-        const nome = c.nome.trim().toLowerCase();
-        humorEmojis[nome] = c.emoji;
-      });
-
-      renderCalendar(currentMonth, currentYear);
-    }
+    let currentMonth = new Date().getMonth();
+    let currentYear = new Date().getFullYear();
 
     function renderCalendar(month, year) {
-      calendarEl.innerHTML = "";
+      calendar.innerHTML = "";
       const diasNoMes = new Date(year, month + 1, 0).getDate();
       const primeiroDia = new Date(year, month, 1).getDay();
+
+      const hoje = new Date();
+      const todayStr = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
 
       const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
         "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
       monthLabel.innerText = `${meses[month]} ${year}`;
 
       for (let i = 0; i < primeiroDia; i++) {
-        calendarEl.innerHTML += `<div></div>`;
+        calendar.innerHTML += `<div class='aspect-square rounded-xl border border-transparent'></div>`;
       }
 
       for (let dia = 1; dia <= diasNoMes; dia++) {
-        const dataStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
-        const registros = moodData[dataStr];
-        const cores = ["purple-light", "purple-medium", "purple-primary"];
-        let html = "";
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+        const entries = moodEntries[dateStr] || [];
 
-        if (registros) {
-          const humor = registros[0].humor.trim().toLowerCase();
-          const emoji = humorEmojis[humor] || "🔘";
-          const bg = cores[Math.floor(Math.random() * cores.length)];
-
-          html = `
-            <div onclick="openModal('${dataStr}')" 
-              class="rounded-xl bg-${bg} text-white p-3 text-center font-medium shadow cursor-pointer transition hover:scale-105">
-              <div class="text-2xl">${emoji}</div>
-              <div class="text-xs">${dia}</div>
-            </div>
-          `;
-        } else {
-          html = `
-            <div class="rounded-xl border border-gray-light p-3 text-center text-xs text-gray-400">
-              ${dia}
-            </div>
-          `;
+        let extraClass = "";
+        if (dateStr === todayStr) {
+          extraClass = "bg-purple-light text-purple-primary font-bold";
         }
 
-        calendarEl.innerHTML += html;
+        let emojiDisplay = entries.slice(0, 3).map(e => emojis[e.humor.trim().toLowerCase()] || "🔘").join(" ");
+
+        let cell;
+        if (entries.length > 0) {
+          cell = `<div onclick=\"openModal('${dateStr}')\" class=\"aspect-square flex flex-col justify-center items-center border-2 border-purple-primary rounded-xl text-center shadow hover:scale-105 transition cursor-pointer ${extraClass}\">
+                    <div class='text-xl'>${emojiDisplay}</div>
+                    <div class='text-xs font-semibold mt-1'>${dia}</div>
+                  </div>`;
+        } else {
+          cell = `<div class=\"aspect-square flex justify-center items-center border border-gray-light rounded-xl text-xs text-gray-400 ${extraClass}\">${dia}</div>`;
+        }
+        calendar.innerHTML += cell;
       }
     }
 
     function openModal(date) {
-      const registros = moodData[date];
-      if (!registros) return;
+      const entries = moodEntries[date];
+      if (!entries) return;
+      const [y, m, d] = date.split("-");
+      const formatDate = `${d}/${m}/${y}`;
+      document.getElementById("modal-date").innerText = formatDate;
 
-      document.getElementById("modal-date").innerText = date;
-      const html = registros.map(reg => `
-        <div class="mb-4 text-sm border-b pb-2 border-gray-light">
-          <div><strong>Humor:</strong> ${reg.humor}</div>
-          <div><strong>Anotação:</strong> ${reg.anotacao || "—"}</div>
-          <div><strong>Tags:</strong> ${reg.tags.length ? reg.tags.join(', ') : "—"}</div>
-          <a href="edit_mood.php?data=${date}" class="text-purple-primary text-xs underline">✏️ Editar</a>
-        </div>
-      `).join('');
-      document.getElementById("modal-content").innerHTML = html;
+      const container = document.getElementById("modal-humor-cards");
+      container.innerHTML = "";
+      entries.forEach(e => {
+        const emoji = emojis[e.humor.trim().toLowerCase()] || "🔘";
+        const anotacao = e.anotacao || "—";
+        container.innerHTML += `<div class='border border-purple-light rounded-lg p-3 shadow-sm'>
+          <div class='font-semibold mb-1'>${emoji} ${e.humor}</div>
+          <div class='text-sm text-gray-700'>${anotacao}</div>
+        </div>`;
+      });
+
       document.getElementById("entry-modal").classList.remove("hidden");
     }
 
@@ -171,7 +203,7 @@
         currentMonth = 11;
         currentYear--;
       }
-      fetchData();
+      renderCalendar(currentMonth, currentYear);
     };
 
     document.getElementById("next").onclick = () => {
@@ -180,10 +212,10 @@
         currentMonth = 0;
         currentYear++;
       }
-      fetchData();
+      renderCalendar(currentMonth, currentYear);
     };
 
-    fetchData();
+    renderCalendar(currentMonth, currentYear);
   </script>
 </body>
 </html>
